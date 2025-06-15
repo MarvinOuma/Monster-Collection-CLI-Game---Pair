@@ -37,6 +37,8 @@ def login_cli(db):
 
 from core_game import catch_monster, calculate_catch_rate
 import random
+from models import MonsterSpecies
+from sqlalchemy.sql.expression import func
 
 def catch_monster_cli(db, player):
     # Simulate encountering a random monster species
