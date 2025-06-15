@@ -28,11 +28,16 @@ def calculate_catch_rate(species_rarity: str, player_level: int) -> float:
     return min(base_rate + level_bonus, 0.95)
 
 def catch_monster(db: Session, player_id: int, species_id: int, player_level: int) -> bool:
+    import logging
+    logging.basicConfig(level=logging.DEBUG)
+    logger = logging.getLogger(__name__)
     species = db.query(MonsterSpecies).filter(MonsterSpecies.id == species_id).first()
     if not species:
+        logger.debug(f"No species found with id {species_id}")
         return False
     catch_rate = calculate_catch_rate(species.rarity, player_level)
     success = random.random() < catch_rate
+    logger.debug(f"Catch rate: {catch_rate}, success: {success}")
     if success:
         # Convert base_stats string to dict safely
         import ast
@@ -46,7 +51,9 @@ def catch_monster(db: Session, player_id: int, species_id: int, player_level: in
             stats=str(base_stats)  # Store as string for now
         )
         db.add(new_monster)
+        db.flush()  # Use flush instead of commit here
         db.commit()
+        logger.debug(f"New monster added: {new_monster}")
     return success
 
 def level_up_monster(db: Session, monster_id: int) -> dict:

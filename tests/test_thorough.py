@@ -44,25 +44,55 @@ class TestThorough(unittest.TestCase):
         self.db.close()
 
     def test_battle_creation_and_turn(self):
-        battle = create_battle(self.db, self.player1.id, self.player2.id, [])
-        self.assertIsNotNone(battle)
-        # Add monsters for battle
+        # Create monsters for battle
+        # Force catch_monster to always succeed by patching random.random
+        import random
+        original_random = random.random
+        random.random = lambda: 0.0  # Always less than catch rate to ensure success
         catch_monster(self.db, self.player1.id, self.species_id, self.player1.level)
         catch_monster(self.db, self.player2.id, self.species_id, self.player2.level)
+        random.random = original_random  # Restore original function
         self.db.commit()  # Commit to save monsters
         attacker_monster = self.db.query(PlayerMonster).filter(PlayerMonster.player_id == self.player1.id).first()
         defender_monster = self.db.query(PlayerMonster).filter(PlayerMonster.player_id == self.player2.id).first()
+        battle = create_battle(self.db, self.player1.id, self.player2.id)
+        self.assertIsNotNone(battle)
         result = execute_turn(self.db, battle.id, attacker_monster.id, defender_monster.id, "Attack")
         self.assertIn('damage', result)
 
     def test_trade_proposal(self):
-        trade = propose_trade(self.db, self.player1.id, self.player2.id, [], [])
+        import logging
+        logging.basicConfig(level=logging.DEBUG)
+        logger = logging.getLogger(__name__)
+        # Create monsters for trade
+        # Force catch_monster to always succeed by patching random.random
+        import random
+        original_random = random.random
+        random.random = lambda: 0.0  # Always less than catch rate to ensure success
+        catch_monster(self.db, self.player1.id, self.species_id, self.player1.level)
+        catch_monster(self.db, self.player2.id, self.species_id, self.player2.level)
+        random.random = original_random  # Restore original function
+        self.db.commit()
+        offered_monster = self.db.query(PlayerMonster).filter(PlayerMonster.player_id == self.player1.id).first()
+        requested_monster = self.db.query(PlayerMonster).filter(PlayerMonster.player_id == self.player2.id).first()
+        logger.debug(f"Offered monster: {offered_monster}")
+        logger.debug(f"Requested monster: {requested_monster}")
+        if not offered_monster or not requested_monster:
+            self.fail("Failed to create player monsters for trade test")
+        trade = propose_trade(self.db, self.player1.id, self.player2.id, [offered_monster.id], [requested_monster.id])
         self.assertIsNotNone(trade)
         self.assertEqual(trade.status, 'pending')
 
     def test_level_up_monster(self):
+        # Force catch_monster to always succeed by patching random.random
+        import random
+        original_random = random.random
+        random.random = lambda: 0.0  # Always less than catch rate to ensure success
         catch_monster(self.db, self.player1.id, self.species_id, self.player1.level)
+        random.random = original_random  # Restore original function
         monster = self.db.query(PlayerMonster).filter(PlayerMonster.player_id == self.player1.id).first()
+        if not monster:
+            self.fail("Failed to create player monster for level up test")
         old_level = monster.level
         level_up_monster(self.db, monster.id)
         self.db.refresh(monster)
