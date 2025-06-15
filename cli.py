@@ -75,19 +75,91 @@ def view_profile_cli(player):
     print(f"Username: {player.username} Level: {player.level} Money: {player.money}")
 
 def battle_cli(db, player):
+    from battle_system import create_battle, execute_turn
+    from core_game import get_player_collection
     print("=== Battle Menu ===")
     print("1. Battle Wild Monster")
     print("2. Battle Player")
     print("3. Back")
     choice = input("Choose an option: ")
     if choice == "1":
-        print("Wild battle feature coming soon.")
+        battle_wild_monster_cli(db, player)
     elif choice == "2":
         print("Player battle feature coming soon.")
     elif choice == "3":
         return
     else:
         print("Invalid choice. Please try again.")
+
+def battle_wild_monster_cli(db, player):
+    import random
+    from core_game import get_player_collection
+    from battle_system import create_battle, execute_turn
+    # Select a random wild monster species
+    species = db.query(MonsterSpecies).order_by(func.random()).first()
+    if not species:
+        print("No wild monsters available.")
+        return
+    print(f"A wild {species.name} ({species.type}) appears!")
+    # Create battle record
+    battle = create_battle(db, player.id)
+    # Select player's monster for battle
+    collection = get_player_collection(db, player.id)
+    if not collection:
+        print("You have no monsters to battle with.")
+        return
+    print("Choose your monster for battle:")
+    for idx, monster in enumerate(collection, 1):
+        print(f"{idx}. {monster['species_name']} (Lv.{monster['level']}) HP: {monster['stats'].get('hp', 'N/A')}")
+    choice = input("Enter choice: ")
+    try:
+        choice_idx = int(choice) - 1
+        player_monster = collection[choice_idx]
+    except (ValueError, IndexError):
+        print("Invalid choice.")
+        return
+    # Create wild monster as PlayerMonster instance (not saved to DB)
+    wild_monster = {
+        'id': None,
+        'species_name': species.name,
+        'level': 1,
+        'stats': {'hp': 30, 'attack': 10, 'defense': 5},
+        'current_hp': 30
+    }
+    print(f"Battle begins! {player_monster['species_name']} vs {wild_monster['species_name']}")
+    # Simple battle loop
+    player_hp = player_monster['stats'].get('hp', 30)
+    wild_hp = wild_monster['stats']['hp']
+    while player_hp > 0 and wild_hp > 0:
+        print(f"\nYour {player_monster['species_name']} HP: {player_hp}")
+        print(f"Wild {wild_monster['species_name']} HP: {wild_hp}")
+        print("Choose your action:")
+        print("1. Attack")
+        print("2. Defend")
+        print("3. Run")
+        action = input("Enter choice: ")
+        if action == "1":
+            damage = 10  # Simplified fixed damage
+            wild_hp -= damage
+            print(f"You dealt {damage} damage!")
+        elif action == "2":
+            print("You defend and reduce incoming damage this turn.")
+        elif action == "3":
+            print("You fled the battle.")
+            return
+        else:
+            print("Invalid action.")
+            continue
+        if wild_hp <= 0:
+            print("You won the battle!")
+            break
+        # Wild monster attacks
+        damage = 8
+        player_hp -= damage
+        print(f"Wild {wild_monster['species_name']} dealt {damage} damage!")
+        if player_hp <= 0:
+            print("You lost the battle!")
+            break
 
 def main():
     from database import SessionLocal
