@@ -34,13 +34,16 @@ def catch_monster(db: Session, player_id: int, species_id: int, player_level: in
     catch_rate = calculate_catch_rate(species.rarity, player_level)
     success = random.random() < catch_rate
     if success:
+        # Convert base_stats string to dict safely
+        import ast
+        base_stats = ast.literal_eval(species.base_stats) if species.base_stats else {}
         new_monster = PlayerMonster(
             player_id=player_id,
             species_id=species_id,
             level=1,
             experience=0,
-            current_hp=species.base_stats.get('hp', 10),  # Assuming base_stats is dict
-            stats=str(species.base_stats)  # Store as string for now
+            current_hp=base_stats.get('hp', 10),
+            stats=str(base_stats)  # Store as string for now
         )
         db.add(new_monster)
         db.commit()

@@ -21,7 +21,7 @@ class Player(Base):
     money = Column(Integer, default=0)
     achievements = relationship("PlayerAchievement", back_populates="player")
     monsters = relationship("PlayerMonster", back_populates="owner")
-    battles = relationship("Battle", back_populates="player")
+    battles = relationship("Battle", back_populates="player", foreign_keys='Battle.player_id')
     trades_sent = relationship("Trade", back_populates="from_player", foreign_keys='Trade.from_player_id')
     trades_received = relationship("Trade", back_populates="to_player", foreign_keys='Trade.to_player_id')
 
@@ -58,7 +58,7 @@ class Battle(Base):
     opponent_id = Column(Integer, ForeignKey('players.id'), nullable=True)  # Null for wild battles
     result = Column(String)  # win, lose, draw
     date = Column(DateTime, default=datetime.datetime.utcnow)
-    player = relationship("Player", back_populates="battles")
+    player = relationship("Player", back_populates="battles", foreign_keys=[player_id])
 
 class Trade(Base):
     __tablename__ = 'trades'
