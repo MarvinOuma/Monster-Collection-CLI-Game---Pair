@@ -35,8 +35,22 @@ def login_cli(db):
     else:
         print(Fore.RED + "Player not found.")
 
+from core_game import catch_monster, calculate_catch_rate
+import random
+
 def catch_monster_cli(db, player):
-    print("Feature coming soon: Encounter wild monsters and catch them.")
+    # Simulate encountering a random monster species
+    species = db.query(MonsterSpecies).order_by(func.random()).first()
+    if not species:
+        print("No monsters available to catch.")
+        return
+    print(f"You encounter a wild {species.name} ({species.type}, {species.rarity})!")
+    print("Attempting to catch...")
+    success = catch_monster(db, player.id, species.id, player.level)
+    if success:
+        print(f"Success! {species.name} joined your team!")
+    else:
+        print(f"Oh no! The {species.name} escaped!")
 
 def view_collection_cli(db, player):
     collection = get_player_collection(db, player.id)
